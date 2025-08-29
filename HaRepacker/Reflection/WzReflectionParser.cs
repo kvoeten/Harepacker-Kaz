@@ -16,7 +16,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
         // Abstract properties and methods to be implemented by concrete parsers
         public abstract string TargetFileName { get; }
         public abstract void DefineSchema(ModelBuilder modelBuilder);
-        public abstract void ParseAndExportData(WzDirectory wzDir, string outputPath);
+        public abstract void ParseAndExportData(WzDirectory wzDir, ModelBuilder modelBuilder, string outputPath);
 
         /// <summary>
         /// Recursively parses a WzSubProperty node into a dictionary suitable for serialization.

@@ -23,7 +23,7 @@ namespace MapleLib.WzLib.Serializer
         /// </summary>
         /// <param name="wzDir">The root directory of the WZ file.</param>
         /// <param name="outputPath">The base path for output files.</param>
-        void ParseAndExportData(WzDirectory wzDir, string outputPath);
+        void ParseAndExportData(WzDirectory wzDir, ModelBuilder modelBuilder, string outputPath);
     }
 
     /// <summary>

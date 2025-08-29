@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace MapleLib.WzLib.Serializer.Model
@@ -21,7 +22,13 @@ namespace MapleLib.WzLib.Serializer.Model
         private readonly HashSet<string> _variants = new();
         public IEnumerable<string> Variants => _variants.OrderBy(v => v);
         public EnumDef(string name) { Name = name; }
-        public void AddVariant(string name) => _variants.Add(name);
+
+        // **FIXED**: This now correctly cleans the variant name, just like the original serializer did.
+        public void AddVariant(string name)
+        {
+            string variantName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name.Replace(".img", ""));
+            _variants.Add(variantName);
+        }
     }
 
     /// <summary>

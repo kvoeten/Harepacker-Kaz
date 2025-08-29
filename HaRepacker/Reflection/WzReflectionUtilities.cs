@@ -1,6 +1,7 @@
 using MapleLib.WzLib.WzProperties;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace MapleLib.WzLib.Serializer
@@ -41,10 +42,15 @@ namespace MapleLib.WzLib.Serializer
         }
 
         /// <summary>
-        /// Sanitizes a name to avoid conflicts with language keywords.
+        /// Sanitizes a name to avoid conflicts with language keywords and invalid identifiers.
         /// </summary>
         public static string SanitizeName(string name)
         {
+            if (int.TryParse(name, out _))
+            {
+                name = $"Key{name}"; // Prepend so it's a valid identifier
+            }
+
             return name switch
             {
                 "string" => "display_string",
@@ -62,6 +68,16 @@ namespace MapleLib.WzLib.Serializer
         {
             if (string.IsNullOrEmpty(text)) return text;
             return Regex.Replace(text, @"([a-z0-9])([A-Z])", "$1_$2").ToLower();
+        }
+
+        /// <summary>
+        /// Converts a snake_case or space-separated string to PascalCase.
+        /// </summary>
+        public static string ToPascalCase(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            return string.Concat(text.Split(new[] { '_', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => char.ToUpper(s[0]) + s.Substring(1).ToLower()));
         }
     }
 }
