@@ -1446,9 +1446,15 @@ namespace HaRepacker.GUI
             if (folderDialog.ShowDialog() != DialogResult.OK)
                 return;
 
-            WzClassicXmlSerializer serializer = new WzClassicXmlSerializer(
+            //WzClassicXmlSerializer serializer = new WzClassicXmlSerializer(
+              //  Program.ConfigurationManager.UserSettings.Indentation,
+                //Program.ConfigurationManager.UserSettings.LineBreakType, false);
+
+            // TEST CAUSE LAZY
+            WzReflectionSerializer serializer = new WzReflectionSerializer(
                 Program.ConfigurationManager.UserSettings.Indentation,
-                Program.ConfigurationManager.UserSettings.LineBreakType, false);
+                Program.ConfigurationManager.UserSettings.LineBreakType
+            );
 
             threadDone = false;
             new Thread(new ParameterizedThreadStart(RunWzFilesExtraction)).Start(

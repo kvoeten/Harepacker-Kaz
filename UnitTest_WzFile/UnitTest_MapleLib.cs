@@ -69,7 +69,7 @@ namespace UnitTest_WzFile {
                     int height = bitmap.Height;
 
                     SurfaceFormat detectedFormat = ImageFormatDetector.DetermineTextureFormat(argbData, width, height);
-                    var (uniqueColors, hasAlpha, hasPartialAlpha, maxAlpha, alphaTransitions, alphaVariance) = ImageFormatDetector.AnalyzeImageData(argbData);
+                    var (uniqueColors, uniqueAlphaValues, hasAlpha, hasPartialAlpha, maxAlpha, alphaTransitions, alphaVariance) = ImageFormatDetector.AnalyzeImageData(argbData, width, height);
                     bool isDxtCompressionCandidate = ImageFormatDetector.IsDxtCompressionCandidate(width, height);
 
                     Debug.WriteLine($"Image: {Path.GetFileName(imagePath)}");
