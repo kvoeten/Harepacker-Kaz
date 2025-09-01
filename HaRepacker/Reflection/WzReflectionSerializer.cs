@@ -18,8 +18,6 @@ namespace MapleLib.WzLib.Serializer
         private readonly List<IWzReflectionFileParser> _fileParsers;
         private readonly IWzReflectionCodeGenerator _codeGenerator;
 
-        // Default constructor uses Rust, but could be configured for other languages.
-        // TODO: Allow generator selection :) (Maybe external format declaration?)
         public WzReflectionSerializer() : this(0, LineBreak.Windows, new WzCodeGeneratorRust()) { }
 
         public WzReflectionSerializer(int indentation, LineBreak lineBreakType) : this(indentation, lineBreakType, new WzCodeGeneratorRust()) { }
@@ -31,7 +29,8 @@ namespace MapleLib.WzLib.Serializer
             _fileParsers = new List<IWzReflectionFileParser>
             {
                 new WzItemParser(),
-                // TODO: Mob, Npc, Map, Etc, Etc.
+                new WzEtcParser(),
+                // TODO: Mob, Npc, Map, etc. can be added here
             };
         }
 
@@ -49,10 +48,8 @@ namespace MapleLib.WzLib.Serializer
 
             var modelBuilder = new ModelBuilder();
 
-            // Let the specific parser define its language-agnostic schema.
+            // The parser defines its schema (or discovers it) and parses the data.
             parser.DefineSchema(modelBuilder);
-
-            // Let the specific parser extract and write its data to BSON/JSON.
             parser.ParseAndExportData(wzDir, modelBuilder, outputPath);
 
             // --- Enhanced Logging ---
@@ -97,7 +94,7 @@ namespace MapleLib.WzLib.Serializer
                 {
                     foreach (var prop in structDef.Properties)
                     {
-                        log.AppendLine($"    - {prop.Name}: {prop.Type}");
+                        log.AppendLine($"    - {prop.Name}: {prop.Type} (Source: {prop.SourcePath})");
                     }
                 }
                 else

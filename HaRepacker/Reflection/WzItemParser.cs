@@ -2,7 +2,6 @@ using MapleLib.WzLib.Serializer.DataModels;
 using MapleLib.WzLib.Serializer.Model;
 using MapleLib.WzLib.WzProperties;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace MapleLib.WzLib.Serializer.Parsers
@@ -22,7 +21,12 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
             modelBuilder.GetOrCreateEnum("ItemType");
 
-            // Define ThothSearchOption schema
+            // Pre-define the superset structs for item info and specs.
+            // Properties will be discovered and added during the parsing phase.
+            modelBuilder.GetOrCreateStruct("Info");
+            modelBuilder.GetOrCreateStruct("Spec");
+
+            // Define ThothSearchOption schema, as it's specific to Item.wz
             DefineThothSearchOptionSchema(modelBuilder);
         }
 
@@ -34,8 +38,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
             var infoStruct = modelBuilder.GetOrCreateStruct("Info");
             var specStruct = modelBuilder.GetOrCreateStruct("Spec");
 
-            // This dictionary mirrors the "guided traversal" from the original serializer,
-            // mapping property names to the structs they should populate.
+            // This dictionary maps property names to the structs they should populate.
             var supersetStructs = new Dictionary<string, StructDef>
             {
                 { "info", infoStruct },
@@ -53,8 +56,8 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                         var itemData = new ItemData { Id = itemId, ItemType = categoryDir.Name };
 
-                        // **CORRECTED LOGIC**: Iterate through the item's properties (like "info", "spec")
-                        // and merge them into the correct superset struct, just like the original parser did.
+                        // Iterate through the item's properties (like "info", "spec")
+                        // and merge them into the correct superset struct.
                         foreach (var prop in itemNode.WzProperties)
                         {
                             if (prop is WzSubProperty subProp && supersetStructs.TryGetValue(prop.Name, out var targetStruct))
@@ -80,7 +83,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
             ExportDataToFile(allItems, "items", outputPath);
 
-            // ThothSearchOption parsing is unchanged, as it was correct.
+            // Parse ThothSearchOption as it is a special case within Item.wz
             var thothImage = wzDir.WzImages.FirstOrDefault(img => img.Name == "ThothSearchOption.img");
             if (thothImage != null)
             {
@@ -88,56 +91,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
             }
         }
 
-        /// <summary>
-        /// Recursively discovers properties from a WZ node and adds them to the schema in the ModelBuilder.
-        /// </summary>
-        private void UpdateSchemaFromNode(WzSubProperty propertyNode, StructDef parentStruct, ModelBuilder modelBuilder, string basePath)
-        {
-            if (propertyNode == null) return;
-
-            foreach (var prop in propertyNode.WzProperties)
-            {
-                if (int.TryParse(prop.Name, out _)) continue;
-
-                string propType = null;
-                string sourcePath = $"{basePath}/{prop.Name}";
-
-                switch (prop)
-                {
-                    case WzSubProperty sub:
-                        string cleanName = WzReflectionUtils.SanitizeName(prop.Name);
-                        string structName = WzReflectionUtils.ToPascalCase(cleanName);
-                        var nestedStruct = modelBuilder.GetOrCreateStruct(structName);
-                        UpdateSchemaFromNode(sub, nestedStruct, modelBuilder, sourcePath);
-                        // Only add the property if the nested struct is not empty
-                        if (nestedStruct.Properties.Any())
-                        {
-                            propType = structName;
-                        }
-                        break;
-                    case WzVectorProperty: propType = "Vector2D"; break;
-                    case WzStringProperty: propType = "String"; break;
-                    case WzShortProperty: propType = "i16"; break;
-                    case WzIntProperty:
-                    case WzLongProperty:
-                        propType = "i32"; break;
-                    case WzFloatProperty: propType = "f32"; break;
-                    case WzDoubleProperty: propType = "f64"; break;
-                    case WzPngProperty: propType = "serde_json::Value"; break;
-                }
-
-                if (propType != null)
-                {
-                    parentStruct.AddProperty(new PropertyDef(prop.Name, propType, sourcePath));
-                }
-            }
-        }
-
-        #region ThothSearchOption
+        #region ThothSearchOption Specific Parsing
         private void DefineThothSearchOptionSchema(ModelBuilder modelBuilder)
         {
             var root = modelBuilder.GetOrCreateStruct("ThothSearchOption");
-            // **FIXED**: The type names here MUST match the full struct names being created below.
             root.AddProperty(new PropertyDef("hot", "Vec<ThothSearchOptionOption>", ""));
             root.AddProperty(new PropertyDef("regular", "Vec<ThothSearchOptionOption>", ""));
             root.AddProperty(new PropertyDef("item_category", "Vec<ThothSearchOptionItemCategory>", ""));
@@ -216,8 +173,6 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
             ExportDataToFile(data, "thoth_search_option", outputPath);
         }
-
         #endregion
     }
 }
-
