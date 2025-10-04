@@ -30,6 +30,7 @@ namespace MapleLib.WzLib.Serializer
             {
                 new WzItemParser(),
                 new WzEtcParser(),
+                new WzCharacterParser(),
                 // TODO: Mob, Npc, Map, etc. can be added here
             };
         }

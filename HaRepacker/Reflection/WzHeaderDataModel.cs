@@ -10,6 +10,7 @@ namespace MapleLib.WzLib.Serializer.DataModels
     {
         public int Id { get; set; }
         public string ItemType { get; set; }
+        public string EquipType { get; set; }
         public Dictionary<string, object> Info { get; set; } = new();
         public Dictionary<string, object> Spec { get; set; } = new();
     }

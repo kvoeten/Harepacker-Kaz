@@ -3,6 +3,7 @@ using MapleLib.WzLib.Serializer.Model;
 using MapleLib.WzLib.WzProperties;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,7 +41,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
                     WzLongProperty l => l.Value,
                     WzFloatProperty f => f.Value,
                     WzDoubleProperty d => d.Value,
-                    WzPngProperty => "[Image Data]", // Placeholder for binary data
+                    WzPngProperty img => Convert.ToBase64String(img.GetBytes()),
                     _ => null
                 };
                 if (value != null)
@@ -88,7 +89,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
                         propType = "i32"; break;
                     case WzFloatProperty: propType = "f32"; break;
                     case WzDoubleProperty: propType = "f64"; break;
-                    case WzPngProperty: propType = "serde_json::Value"; break; // Treat images as generic JSON values
+                    case WzPngProperty: propType = "String"; break; // base 64
                 }
 
                 if (propType != null)

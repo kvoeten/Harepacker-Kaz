@@ -15,7 +15,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
             // Define main Item schema with concrete types for info and spec
             var mainItemStruct = modelBuilder.GetOrCreateStruct("Item");
             mainItemStruct.AddProperty(new PropertyDef("id", "i32", ""));
-            mainItemStruct.AddProperty(new PropertyDef("item_type", "ItemType", ""));
+            mainItemStruct.AddProperty(new PropertyDef("type", "ItemType", ""));
             mainItemStruct.AddProperty(new PropertyDef("info", "Option<Info>", ""));
             mainItemStruct.AddProperty(new PropertyDef("spec", "Option<Spec>", ""));
 
