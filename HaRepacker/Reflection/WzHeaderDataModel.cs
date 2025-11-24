@@ -8,6 +8,7 @@ namespace MapleLib.WzLib.Serializer.DataModels
     #region Item Data Models
     public class ItemData
     {
+        [JsonProperty("_id")]
         public int Id { get; set; }
         public string ItemType { get; set; }
         public string EquipType { get; set; }

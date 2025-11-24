@@ -94,7 +94,12 @@ namespace MapleLib.WzLib.Serializer.CodeGenerators
                 // Use the new robust method to get the fully-qualified type name.
                 string qualifiedPropType = GetQualifiedTypeName(prop.Type, structDef.Name);
 
-                if (originalName != snakeCaseName && !string.IsNullOrEmpty(originalName))
+                if (originalName == "_id")
+                {
+                    snakeCaseName = "id";
+                    fieldsBuilder.AppendLine($"{indent}    #[serde(rename = \"_id\")]");
+                }
+                else if (originalName != snakeCaseName && !string.IsNullOrEmpty(originalName))
                 {
                     fieldsBuilder.AppendLine($"{indent}    #[serde(rename = \"{originalName}\")]");
                 }

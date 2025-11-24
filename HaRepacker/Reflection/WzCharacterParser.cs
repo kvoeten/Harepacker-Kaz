@@ -15,8 +15,8 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             // Define main Item schema with concrete types for info and spec
             var mainItemStruct = modelBuilder.GetOrCreateStruct("Equip");
-            mainItemStruct.AddProperty(new PropertyDef("id", "i32", ""));
-            mainItemStruct.AddProperty(new PropertyDef("type", "ItemType", ""));
+            mainItemStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            mainItemStruct.AddProperty(new PropertyDef("EquipType", "EquipType", ""));
             mainItemStruct.AddProperty(new PropertyDef("info", "Option<Info>", ""));
             mainItemStruct.AddProperty(new PropertyDef("spec", "Option<Spec>", ""));
 
@@ -49,7 +49,8 @@ namespace MapleLib.WzLib.Serializer.Parsers
                 foreach (WzImage itemImg in categoryDir.WzImages)
                 {
                     // Verify ID
-                    if (!int.TryParse(itemImg.Name, out int itemId)) continue;
+                    string name = itemImg.Name.Replace(".img", "");
+                    if (!int.TryParse(name, out int itemId)) continue;
                     var itemData = new ItemData { Id = itemId, ItemType = "Equip", EquipType = categoryDir.Name };
 
                     // Iterate through the item's properties (like "info", "spec")
