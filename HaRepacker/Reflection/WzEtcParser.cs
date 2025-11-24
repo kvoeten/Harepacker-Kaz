@@ -1,7 +1,11 @@
 using MapleLib.WzLib;
 using MapleLib.WzLib.Serializer.Model;
 using MapleLib.WzLib.WzProperties;
+using MapleLib.WzLib.WzStructure;
+using Microsoft.VisualBasic.Logging;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -18,140 +22,239 @@ namespace MapleLib.WzLib.Serializer.Parsers
         public override void DefineSchema(ModelBuilder modelBuilder)
         {
             // Schema is generated dynamically during the data parsing phase.
+            var genderData = modelBuilder.GetOrCreateStruct("GenderData");
+            genderData.AddProperty(new PropertyDef("maleData", "HashMap<i32, Vec<i32>>", ""));
+            genderData.AddProperty(new PropertyDef("femaleData", "HashMap<i32, Vec<i32>>", ""));
         }
 
         public override void ParseAndExportData(WzDirectory wzDir, ModelBuilder modelBuilder, string outputPath)
         {
-            // Process top-level directories as categories of items
+            /*
+             *  Etc.wz is very chaotic with many unique data entires. Sanitizing the export requires a more manual approach.
+             *  Property discover is limited, unhandled elements are to be logged so new manual entries can be made.
+             */
+
+            string[] unhandled = { };
+
+            // Process top-level directories
             foreach (var categoryDir in wzDir.WzDirectories)
             {
-                ProcessCategoryDirectory(categoryDir, modelBuilder, outputPath);
+                switch (categoryDir.Name)
+                {
+                    default:
+                        unhandled.Append(categoryDir.Name);
+                        break;
+                }
             }
 
-            // Process top-level images as standalone data structures
+            // Process top-level images
             foreach (var image in wzDir.WzImages)
             {
-                ProcessStandaloneImage(image, modelBuilder, outputPath);
+               
+               switch(image.Name)
+               {
+                    case "MakeCharInfo.img":
+                        ProcessMakeCharInfo(image, modelBuilder, outputPath);
+                        break;
+                    default:
+                        unhandled.Append(image.Name);
+                        break;
+               }
+                 
             }
+
+            foreach (string failed in unhandled)
+            {
+                Debug.WriteLine("Unhandled Etc.wz Entry!! [ " + failed + "]");
+            }
+
         }
 
-        /// <summary>
-        /// Processes a directory as a collection of items sharing a common schema.
-        /// </summary>
-        private void ProcessCategoryDirectory(WzDirectory categoryDir, ModelBuilder modelBuilder, string outputPath)
+        public struct GenderData
         {
-            string categoryName = WzReflectionUtils.ToPascalCase(categoryDir.Name); // e.g., "Android"
-            var entryStruct = modelBuilder.GetOrCreateStruct(categoryName);
-            entryStruct.AddProperty(new PropertyDef("id", "i32", ""));
-
-            var allEntriesData = new List<Dictionary<string, object>>();
-            var supersetStructs = new Dictionary<string, StructDef>();
-
-            // Iterate over all .img files in the directory to build a complete "superset" schema
-            foreach (var image in categoryDir.WzImages.OfType<WzImage>())
-            {
-                if (!int.TryParse(Path.GetFileNameWithoutExtension(image.Name), out int imageId)) continue;
-
-                var currentEntryData = new Dictionary<string, object> { { "id", imageId } };
-
-                foreach (var prop in image.WzProperties.OfType<WzSubProperty>())
-                {
-                    // Define nested struct name, e.g., "AndroidInfo"
-                    string nestedStructName = categoryName + WzReflectionUtils.ToPascalCase(prop.Name);
-
-                    // Get or create the superset struct for this property type
-                    if (!supersetStructs.TryGetValue(prop.Name, out var targetStruct))
-                    {
-                        targetStruct = modelBuilder.GetOrCreateStruct(nestedStructName);
-                        supersetStructs[prop.Name] = targetStruct;
-
-                        // Add property to the main entry struct, e.g., pub info: Option<AndroidInfo>
-                        entryStruct.AddProperty(new PropertyDef(prop.Name, $"Option<{nestedStructName}>", ""));
-                    }
-
-                    // Discover/update the schema from this node's properties
-                    UpdateSchemaRecursively(prop, targetStruct, modelBuilder, $"{categoryDir.Name}/{image.Name}/{prop.Name}", categoryName);
-
-                    // Parse the data for this property
-                    currentEntryData[prop.Name] = ParsePropertyNode(prop);
-                }
-                allEntriesData.Add(currentEntryData);
-            }
-
-            // Export all parsed data for this category to a single file
-            ExportDataToFile(allEntriesData, WzReflectionUtils.ToSnakeCase(categoryDir.Name), outputPath);
+            // List of valid item id's per bodypart
+            public Dictionary<int, List<int>> maleData;
+            public Dictionary<int, List<int>> femaleData;
         }
 
         /// <summary>
         /// Processes a single .img file at the root as a standalone data structure.
         /// </summary>
-        private void ProcessStandaloneImage(WzImage image, ModelBuilder modelBuilder, string outputPath)
+        private void ProcessMakeCharInfo(WzImage image, ModelBuilder modelBuilder, string outputPath)
         {
-            string entryName = Path.GetFileNameWithoutExtension(image.Name);
-            string structName = WzReflectionUtils.ToPascalCase(WzReflectionUtils.SanitizeName(entryName));
+            string structName = WzReflectionUtils.ToPascalCase(WzReflectionUtils.SanitizeName(image.Name));
             var rootStruct = modelBuilder.GetOrCreateStruct(structName);
 
-            var container = new WzSubProperty(image.Name);
-            container.AddProperties(image.WzProperties);
+            Dictionary<int, GenderData> JobGenderData = new Dictionary<int, GenderData>();
 
-            UpdateSchemaRecursively(container, rootStruct, modelBuilder, entryName, "");
-
-            if (rootStruct.Properties.Any())
+            foreach (WzSubProperty job in image.WzProperties)
             {
-                var data = ParsePropertyNode(container);
-                ExportDataToFile(data, WzReflectionUtils.ToSnakeCase(entryName), outputPath);
+                ProcessJobMakeCharInfo(JobGenderData, job, modelBuilder, outputPath);
             }
+
+            /* Output should be bson/ json for "MakeCharInfo" with the Dictionary<int, GenderData> data,
+            * and a header definition for Dictionary<int, GenderData> named 
+            * MakeCharInfo (in correct naming scheme for export language, e.g make_char_info for rust) */
+            
+            /* Output should be bson/ json for "MakeCharInfo" with the Dictionary<int, GenderData> data,
+            * and a header definition for Dictionary<int, GenderData> named 
+            * MakeCharInfo (in correct naming scheme for export language, e.g make_char_info for rust) */
+            
+            ExportDataToFile(JobGenderData, "make_char_info", outputPath);
         }
 
-        /// <summary>
-        /// Custom recursive schema discovery method for Etc.wz that handles prefixed struct names.
-        /// </summary>
-        private void UpdateSchemaRecursively(WzSubProperty propertyNode, StructDef parentStruct, ModelBuilder modelBuilder, string basePath, string namePrefix)
+        private void ProcessJobMakeCharInfo(Dictionary<int, GenderData> JobGenderData, WzSubProperty job, ModelBuilder modelBuilder, string outputPath)
         {
-            if (propertyNode == null) return;
+            Debug.WriteLine($"Processing Job: {job.Name}");
+            int jobId = -1;
 
-            foreach (var prop in propertyNode.WzProperties)
+            // Helper to find property case-insensitively or by specific known names
+            WzSubProperty FindSubProperty(WzSubProperty parent, string name)
             {
-                if (int.TryParse(prop.Name, out _)) continue; // Skip numeric keys
+                return (WzSubProperty)parent.WzProperties.Find(obj => obj.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
+            }
 
-                string propType = GetPropertyTypeString(prop);
-                string sourcePath = $"{basePath}/{prop.Name}";
+            WzSubProperty maleData = FindSubProperty(job, "male");
+            if (maleData == null) maleData = FindSubProperty(job, "Male"); // Explicit check if case-insensitive didn't work or if we want to be sure
+            
+            WzSubProperty femaleData = FindSubProperty(job, "female");
+            if (femaleData == null) femaleData = FindSubProperty(job, "Female");
 
-                if (prop is WzSubProperty sub)
+            // Get job ID and adjust male/female data if needed..
+            if (!int.TryParse(job.Name, out jobId))
+            {
+                switch (job.Name)
                 {
-                    string cleanName = WzReflectionUtils.SanitizeName(prop.Name);
-                    // Use prefix for nested structs to avoid name collisions, e.g., "Android" + "Info"
-                    string structName = namePrefix + WzReflectionUtils.ToPascalCase(cleanName);
-                    var nestedStruct = modelBuilder.GetOrCreateStruct(structName);
+                    case "CharFemale":
+                        jobId = 0;
+                        femaleData = job;
+                        break;
+                    case "CharMale":
+                        jobId = 0;
+                        maleData = job;
+                        break;
+                    case "Info":
+                        jobId = 0;
+                        maleData = FindSubProperty(job, "CharMale");
+                        femaleData = FindSubProperty(job, "CharFemale");
+                        break;
+                    case "EvanCharFemale":
+                        jobId = 30000;
+                        femaleData = job;
+                        break;
+                    case "EvanCharMale":
+                        jobId = 30000;
+                        maleData = job;
+                        break;
+                    case "JumpingCharacter":
+                        jobId = 0431;
+                        var subProp = (WzSubProperty)job.WzProperties.Find(obj => obj.Name == "0431");
+                        if (subProp != null)
+                        {
+                            maleData = FindSubProperty(subProp, "Male");
+                            femaleData = FindSubProperty(subProp, "Female");
+                        }
+                        break;
+                    case "OrientCharFemale":
+                        jobId = 0;
+                        femaleData = job;
+                        break;
+                    case "OrientCharMale":
+                        jobId = 0;
+                        maleData = job;
+                        break;
+                    case "PremiumCharFemale":
+                        jobId = 0;
+                        femaleData = job;
+                        break;
+                    case "PremiumCharMale":
+                        jobId = 0;
+                        maleData = job;
+                        break;
+                    case "ResistanceCharFemale":
+                        jobId = 0;
+                        femaleData = job;
+                        break;
+                    case "ResistanceCharMale":
+                        jobId = 0;
+                        maleData = job;
+                        break;
+                    case "UltimateAdventurer":
+                        foreach (WzSubProperty ultimateJob in job.WzProperties)
+                        {
+                            ProcessJobMakeCharInfo(JobGenderData, ultimateJob, modelBuilder, outputPath);
+                        }
+                        return; // Return after processing children
+                    case "3001_Dummy":
+                        jobId = 3001;
+                        break;
+                    case "10112_Dummy":
+                        jobId = 10112;
+                        break;
+                    default:
+                        Debug.WriteLine("Failed to parse MakeCharInfo for: " + job.Name);
+                        return;
+                }
+            }
 
-                    UpdateSchemaRecursively(sub, nestedStruct, modelBuilder, sourcePath, namePrefix);
+            // Now add the data
+            if (maleData == null && femaleData == null)
+            {
+                Debug.WriteLine("Failed to parse MakeCharInfo (No Gender Data) for: " + job.Name);
+                return;
+            }
+            else
+            {
+                // Duplicate entries for non-binary genders
+                if (maleData == null) maleData = femaleData;
+                else if (femaleData == null) femaleData = maleData;
+            }
 
-                    if (nestedStruct.Properties.Any())
+            // For each bodypart a list of valid ItemID's
+            GenderData BPOptions;
+            if (!JobGenderData.TryGetValue(jobId, out BPOptions))
+            {
+                BPOptions = new GenderData
+                {
+                    maleData = new Dictionary<int, List<int>>(),
+                    femaleData = new Dictionary<int, List<int>>()
+                };
+            }
+
+            void ProcessGenderData(WzSubProperty data, Dictionary<int, List<int>> targetDict)
+            {
+                if (data == null) return;
+                foreach (WzSubProperty bodyPart in data.WzProperties)
+                {
+                    if (!int.TryParse(bodyPart.Name, out int bodyPartId))
+                        continue;
+
+                    foreach (var prop in bodyPart.WzProperties)
                     {
-                        propType = structName;
+                        if (prop is WzIntProperty itemId)
+                        {
+                            if (!targetDict.TryGetValue(bodyPartId, out List<int> BodyPartItems))
+                            {
+                                BodyPartItems = new List<int>();
+                                targetDict[bodyPartId] = BodyPartItems;
+                            }
+                            BodyPartItems.Add(itemId.GetInt());
+                        }
+                        else
+                        {
+                            string fullPath = $"Etc.wz/MakeCharInfo.img/{job.Name}/{data.Name}/{bodyPart.Name}/{prop.Name}";
+                            Debug.WriteLine($"[WARNING] Non-integer property found: {fullPath} (Type: {prop.GetType().Name})");
+                        }
                     }
                 }
-
-                if (propType != null)
-                {
-                    parentStruct.AddProperty(new PropertyDef(prop.Name, propType, sourcePath));
-                }
             }
-        }
 
-        private string GetPropertyTypeString(WzImageProperty prop)
-        {
-            return prop switch
-            {
-                WzVectorProperty => "Vector2D",
-                WzStringProperty => "String",
-                WzShortProperty => "i16",
-                WzIntProperty => "i32",
-                WzLongProperty => "i32",
-                WzFloatProperty => "f32",
-                WzDoubleProperty => "f64",
-                _ => null
-            };
+            ProcessGenderData(maleData, BPOptions.maleData);
+            ProcessGenderData(femaleData, BPOptions.femaleData);
+
+            // Push back into map (update or add)
+            JobGenderData[jobId] = BPOptions;
+            Debug.WriteLine($"Processed Job {jobId} successfully.");
         }
     }
 }

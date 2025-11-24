@@ -110,15 +110,20 @@ namespace MapleLib.WzLib.Serializer.CodeGenerators
         /// </summary>
         private string GetQualifiedTypeName(string typeName, string ownerStructName)
         {
-            // Regex to capture generic wrappers like Vec<T> or Option<T>.
+            // Regex to capture generic wrappers like Vec<T> or HashMap<K, V>.
+            // This regex captures the outer type and the inner content.
             var match = Regex.Match(typeName, @"^(\w+)<(.+)>$");
 
             if (match.Success)
             {
-                string wrapper = match.Groups[1].Value; // e.g., "Vec" or "Option"
-                string innerType = match.Groups[2].Value; // e.g., "ThothSearchOptionOption" or "Info"
-                string qualifiedInnerType = GetQualifiedTypeName(innerType, ownerStructName);
-                return $"{wrapper}<{qualifiedInnerType}>";
+                string wrapper = match.Groups[1].Value; // e.g., "Vec", "Option", "HashMap"
+                string innerContent = match.Groups[2].Value; // e.g., "ThothSearchOptionOption", "i32, Vec<i32>"
+
+                // Split inner content by comma, respecting nested angle brackets
+                var innerTypes = SplitTypeArgs(innerContent);
+                var qualifiedInnerTypes = innerTypes.Select(t => GetQualifiedTypeName(t.Trim(), ownerStructName));
+
+                return $"{wrapper}<{string.Join(", ", qualifiedInnerTypes)}>";
             }
 
             if (Primitives.Contains(typeName))
@@ -145,6 +150,26 @@ namespace MapleLib.WzLib.Serializer.CodeGenerators
         {
             var variants = string.Join(",\n", enumDef.Variants.Select(v => $"    {v}"));
             return $"\n#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]\npub enum {enumDef.Name} {{\n{variants},\n}}";
+        }
+
+        private List<string> SplitTypeArgs(string content)
+        {
+            var args = new List<string>();
+            int bracketLevel = 0;
+            int lastSplit = 0;
+
+            for (int i = 0; i < content.Length; i++)
+            {
+                if (content[i] == '<') bracketLevel++;
+                else if (content[i] == '>') bracketLevel--;
+                else if (content[i] == ',' && bracketLevel == 0)
+                {
+                    args.Add(content.Substring(lastSplit, i - lastSplit));
+                    lastSplit = i + 1;
+                }
+            }
+            args.Add(content.Substring(lastSplit));
+            return args;
         }
     }
 }
