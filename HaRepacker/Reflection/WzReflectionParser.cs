@@ -22,6 +22,11 @@ namespace MapleLib.WzLib.Serializer.Parsers
         public abstract void ParseAndExportData(WzDirectory wzDir, ModelBuilder modelBuilder, string outputPath);
 
         /// <summary>
+        /// Default implementation checks against TargetFileName. Override for pattern matching.
+        /// </summary>
+        public virtual bool MatchesFile(string fileName) => fileName == TargetFileName;
+
+        /// <summary>
         /// Recursively parses a WzSubProperty node into a dictionary suitable for serialization.
         /// </summary>
         protected Dictionary<string, object> ParsePropertyNode(WzSubProperty propertyNode)

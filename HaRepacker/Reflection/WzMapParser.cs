@@ -11,6 +11,8 @@ namespace MapleLib.WzLib.Serializer.Parsers
     {
         public override string TargetFileName => "Map.wz";
 
+        public override bool MatchesFile(string fileName) => fileName == "Map.wz" || fileName == "Map2.wz";
+
         public override void DefineSchema(ModelBuilder modelBuilder)
         {
             var mapStruct = modelBuilder.GetOrCreateStruct("Map");

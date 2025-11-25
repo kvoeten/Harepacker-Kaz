@@ -32,7 +32,10 @@ namespace MapleLib.WzLib.Serializer
                 new WzEtcParser(),
                 new WzCharacterParser(),
                 new WzMapParser(),
-                // TODO: Mob, Npc, Map, etc. can be added here
+                new WzMobParser(),
+                new WzNpcParser(),
+                new WzReactorParser(),
+                new WzSkillParser(),
             };
         }
 
@@ -45,7 +48,7 @@ namespace MapleLib.WzLib.Serializer
         /// </summary>
         private void ProcessDirectory(WzDirectory wzDir, string outputPath)
         {
-            var parser = _fileParsers.FirstOrDefault(p => p.TargetFileName == wzDir.Name);
+            var parser = _fileParsers.FirstOrDefault(p => p.MatchesFile(wzDir.Name));
             if (parser == null) return; // No parser for this file, skip.
 
             var modelBuilder = new ModelBuilder();

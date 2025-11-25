@@ -13,6 +13,13 @@ namespace MapleLib.WzLib.Serializer
         string TargetFileName { get; }
 
         /// <summary>
+        /// Checks if this parser can handle the given WZ file name.
+        /// </summary>
+        /// <param name="fileName">The WZ file name to check.</param>
+        /// <returns>True if this parser can handle the file, false otherwise.</returns>
+        bool MatchesFile(string fileName);
+
+        /// <summary>
         /// Defines the language-agnostic schema (structs, enums) for this file's data.
         /// </summary>
         /// <param name="modelBuilder">The model builder to define the schema in.</param>
