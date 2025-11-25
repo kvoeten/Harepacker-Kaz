@@ -91,14 +91,6 @@ namespace MapleLib.WzLib.Serializer.Parsers
             {
                 ProcessJobMakeCharInfo(JobGenderData, job, modelBuilder, outputPath);
             }
-
-            /* Output should be bson/ json for "MakeCharInfo" with the Dictionary<int, GenderData> data,
-            * and a header definition for Dictionary<int, GenderData> named 
-            * MakeCharInfo (in correct naming scheme for export language, e.g make_char_info for rust) */
-            
-            /* Output should be bson/ json for "MakeCharInfo" with the Dictionary<int, GenderData> data,
-            * and a header definition for Dictionary<int, GenderData> named 
-            * MakeCharInfo (in correct naming scheme for export language, e.g make_char_info for rust) */
             
             ExportDataToFile(JobGenderData, "make_char_info", outputPath);
         }
