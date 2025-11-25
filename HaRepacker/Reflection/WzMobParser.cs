@@ -16,6 +16,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             var mobStruct = modelBuilder.GetOrCreateStruct("Mob");
             mobStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            mobStruct.AddProperty(new PropertyDef("name", "Option<String>", ""));
             mobStruct.AddProperty(new PropertyDef("info", "Info", ""));
 
             // Ensure Info struct exists
@@ -39,6 +40,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                 var mobData = new Dictionary<string, object>();
                 mobData["_id"] = mobId;
+
+                // Add string data
+                var name = WzStringCache.Get("mob", mobId, "name");
+                if (name != null) mobData["name"] = name;
 
                 if (mobImg["info"] is WzSubProperty infoNode)
                 {

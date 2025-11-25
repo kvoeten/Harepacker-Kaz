@@ -17,6 +17,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             var mapStruct = modelBuilder.GetOrCreateStruct("Map");
             mapStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            mapStruct.AddProperty(new PropertyDef("streetName", "Option<String>", ""));
+            mapStruct.AddProperty(new PropertyDef("mapName", "Option<String>", ""));
+            mapStruct.AddProperty(new PropertyDef("mapDesc", "Option<String>", ""));
+            mapStruct.AddProperty(new PropertyDef("miniMap", "Option<String>", ""));
             mapStruct.AddProperty(new PropertyDef("info", "Info", ""));
             mapStruct.AddProperty(new PropertyDef("life", "Vec<Life>", ""));
             mapStruct.AddProperty(new PropertyDef("reactor", "Vec<Reactor>", ""));
@@ -90,6 +94,18 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                     var mapData = new Dictionary<string, object>();
                     mapData["_id"] = mapId;
+
+                    // Add string data
+                    var streetName = WzStringCache.Get("map", mapId, "streetName");
+                    var mapName = WzStringCache.Get("map", mapId, "mapName");
+                    var mapDesc = WzStringCache.Get("map", mapId, "mapDesc");
+                    if (streetName != null) mapData["streetName"] = streetName;
+                    if (mapName != null) mapData["mapName"] = mapName;
+                    if (mapDesc != null) mapData["mapDesc"] = mapDesc;
+
+                    // Extract miniMap canvas image
+                    var miniMap = ExtractImageAsBase64(mapImg, "miniMap/canvas");
+                    if (miniMap != null) mapData["miniMap"] = miniMap;
 
                     // --- Parse 'info' ---
                     if (mapImg["info"] is WzSubProperty infoNode)

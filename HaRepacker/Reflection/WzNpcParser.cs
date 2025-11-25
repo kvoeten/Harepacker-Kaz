@@ -25,6 +25,9 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             var npcStruct = modelBuilder.GetOrCreateStruct("Npc");
             npcStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            npcStruct.AddProperty(new PropertyDef("name", "Option<String>", ""));
+            npcStruct.AddProperty(new PropertyDef("desc", "Option<String>", ""));
+            npcStruct.AddProperty(new PropertyDef("stand", "Option<String>", ""));
             npcStruct.AddProperty(new PropertyDef("info", "Info", ""));
 
             // Ensure Info struct exists
@@ -48,6 +51,16 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                 var npcData = new Dictionary<string, object>();
                 npcData["_id"] = npcId;
+
+                // Add string data
+                var name = WzStringCache.Get("npc", npcId, "name");
+                var desc = WzStringCache.Get("npc", npcId, "desc");
+                if (name != null) npcData["name"] = name;
+                if (desc != null) npcData["desc"] = desc;
+
+                // Extract stand image
+                var stand = ExtractImageAsBase64(npcImg, "stand/0");
+                if (stand != null) npcData["stand"] = stand;
 
                 if (npcImg["info"] is WzSubProperty infoNode)
                 {

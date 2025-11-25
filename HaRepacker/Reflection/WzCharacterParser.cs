@@ -17,6 +17,9 @@ namespace MapleLib.WzLib.Serializer.Parsers
             var mainItemStruct = modelBuilder.GetOrCreateStruct("Equip");
             mainItemStruct.AddProperty(new PropertyDef("_id", "i32", ""));
             mainItemStruct.AddProperty(new PropertyDef("EquipType", "EquipType", ""));
+            mainItemStruct.AddProperty(new PropertyDef("name", "Option<String>", ""));
+            mainItemStruct.AddProperty(new PropertyDef("desc", "Option<String>", ""));
+            mainItemStruct.AddProperty(new PropertyDef("icon", "Option<String>", ""));
             mainItemStruct.AddProperty(new PropertyDef("info", "Option<Info>", ""));
             mainItemStruct.AddProperty(new PropertyDef("spec", "Option<Spec>", ""));
 
@@ -49,8 +52,8 @@ namespace MapleLib.WzLib.Serializer.Parsers
                 foreach (WzImage itemImg in categoryDir.WzImages)
                 {
                     // Verify ID
-                    string name = itemImg.Name.Replace(".img", "");
-                    if (!int.TryParse(name, out int itemId)) continue;
+                    string imgName = itemImg.Name.Replace(".img", "");
+                    if (!int.TryParse(imgName, out int itemId)) continue;
                     var itemData = new ItemData { Id = itemId, ItemType = "Equip", EquipType = categoryDir.Name };
 
                     // Iterate through the item's properties (like "info", "spec")
@@ -73,6 +76,16 @@ namespace MapleLib.WzLib.Serializer.Parsers
                             }
                         }
                     }
+
+                    // Add string data
+                    var name = WzStringCache.Get("item", itemId, "name");
+                    var desc = WzStringCache.Get("item", itemId, "desc");
+                    if (name != null) itemData.Name = name;
+                    if (desc != null) itemData.Desc = desc;
+
+                    // Extract icon image
+                    var icon = ExtractImageAsBase64(itemImg, "info/icon");
+                    if (icon != null) itemData.Icon = icon;
 
                     // Add props to item data
                     allItems.Add(itemData);

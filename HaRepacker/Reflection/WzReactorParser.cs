@@ -14,6 +14,7 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             var reactorStruct = modelBuilder.GetOrCreateStruct("Reactor");
             reactorStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            reactorStruct.AddProperty(new PropertyDef("icon", "Option<String>", ""));
             reactorStruct.AddProperty(new PropertyDef("info", "Info", ""));
 
             // Ensure Info struct exists
@@ -43,6 +44,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
                     UpdateSchemaFromNode(infoNode, infoStruct, modelBuilder, $"{reactorImg.Name}/info");
                     reactorData["info"] = ParsePropertyNode(infoNode);
                 }
+
+                // Extract reactor icon image (0/0 path)
+                var icon = ExtractImageAsBase64(reactorImg, "0/0");
+                if (icon != null) reactorData["icon"] = icon;
                 
                 allReactors.Add(reactorData);
             }

@@ -14,6 +14,9 @@ namespace MapleLib.WzLib.Serializer.Parsers
         {
             var skillStruct = modelBuilder.GetOrCreateStruct("Skill");
             skillStruct.AddProperty(new PropertyDef("_id", "i32", ""));
+            skillStruct.AddProperty(new PropertyDef("name", "Option<String>", ""));
+            skillStruct.AddProperty(new PropertyDef("desc", "Option<String>", ""));
+            skillStruct.AddProperty(new PropertyDef("icon", "Option<String>", ""));
             skillStruct.AddProperty(new PropertyDef("levels", "Vec<SkillLevel>", ""));
 
             var skillLevelStruct = modelBuilder.GetOrCreateStruct("SkillLevel");
@@ -54,6 +57,16 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                     var skillData = new Dictionary<string, object>();
                     skillData["_id"] = skillId;
+
+                    // Add string data
+                    var name = WzStringCache.Get("skill", skillId, "name");
+                    var desc = WzStringCache.Get("skill", skillId, "desc");
+                    if (name != null) skillData["name"] = name;
+                    if (desc != null) skillData["desc"] = desc;
+
+                    // Extract skill icon image
+                    var icon = ExtractImageAsBase64(skillNode, "icon");
+                    if (icon != null) skillData["icon"] = icon;
 
                     var levels = new List<Dictionary<string, object>>();
 

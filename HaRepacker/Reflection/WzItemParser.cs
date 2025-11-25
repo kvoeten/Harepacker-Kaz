@@ -16,6 +16,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
             var mainItemStruct = modelBuilder.GetOrCreateStruct("Item");
             mainItemStruct.AddProperty(new PropertyDef("_id", "i32", ""));
             mainItemStruct.AddProperty(new PropertyDef("type", "ItemType", ""));
+            mainItemStruct.AddProperty(new PropertyDef("name", "Option<String>", ""));
+            mainItemStruct.AddProperty(new PropertyDef("desc", "Option<String>", ""));
+            mainItemStruct.AddProperty(new PropertyDef("icon", "Option<String>", ""));
+            mainItemStruct.AddProperty(new PropertyDef("sample", "Option<String>", ""));
             mainItemStruct.AddProperty(new PropertyDef("info", "Option<Info>", ""));
             mainItemStruct.AddProperty(new PropertyDef("spec", "Option<Spec>", ""));
 
@@ -76,6 +80,19 @@ namespace MapleLib.WzLib.Serializer.Parsers
                                 }
                             }
                         }
+
+                        // Add string data
+                        var name = WzStringCache.Get("item", itemId, "name");
+                        var desc = WzStringCache.Get("item", itemId, "desc");
+                        if (name != null) itemData.Name = name;
+                        if (desc != null) itemData.Desc = desc;
+
+                        // Extract images
+                        var icon = ExtractImageAsBase64(itemNode, "info/icon");
+                        var sample = ExtractImageAsBase64(itemNode, "info/sample");
+                        if (icon != null) itemData.Icon = icon;
+                        if (sample != null) itemData.Sample = sample;
+
                         allItems.Add(itemData);
                     }
                 }

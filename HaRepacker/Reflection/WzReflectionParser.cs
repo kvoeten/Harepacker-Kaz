@@ -150,6 +150,49 @@ namespace MapleLib.WzLib.Serializer.Parsers
             string jsonPath = Path.Combine(jsonDir, $"{fileName}.json");
             File.WriteAllText(jsonPath, JsonConvert.SerializeObject(data, Formatting.Indented));
         }
+
+        /// <summary>
+        /// Extracts a base64-encoded image from a WzPngProperty at the specified path.
+        /// Returns null if the property doesn't exist or isn't a WzPngProperty.
+        /// </summary>
+        protected string ExtractImageAsBase64(WzObject parent, string path)
+        {
+            try
+            {
+                var parts = path.Split('/');
+                WzObject current = parent;
+
+                foreach (var part in parts)
+                {
+                    if (current is WzSubProperty subProp)
+                    {
+                        current = subProp[part];
+                    }
+                    else if (current is WzImage img)
+                    {
+                        current = img[part];
+                    }
+                    else
+                    {
+                        return null;
+                    }
+
+                    if (current == null)
+                        return null;
+                }
+
+                if (current is WzPngProperty pngProp)
+                {
+                    var bytes = pngProp.GetBytes();
+                    return Convert.ToBase64String(bytes);
+                }
+            }
+            catch
+            {
+                // Silently fail - image extraction is optional
+            }
+
+            return null;
+        }
     }
 }
-

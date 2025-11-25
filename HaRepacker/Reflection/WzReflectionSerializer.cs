@@ -28,6 +28,7 @@ namespace MapleLib.WzLib.Serializer
             _codeGenerator = codeGenerator;
             _fileParsers = new List<IWzReflectionFileParser>
             {
+                new WzStringParser(), // Must be first to populate string cache
                 new WzItemParser(),
                 new WzEtcParser(),
                 new WzCharacterParser(),
@@ -48,6 +49,9 @@ namespace MapleLib.WzLib.Serializer
         /// </summary>
         private void ProcessDirectory(WzDirectory wzDir, string outputPath)
         {
+            // Auto-discover and load String.wz if it exists in the same directory
+            AutoLoadStringData(wzDir);
+
             var parser = _fileParsers.FirstOrDefault(p => p.MatchesFile(wzDir.Name));
             if (parser == null) return; // No parser for this file, skip.
 
@@ -66,6 +70,61 @@ namespace MapleLib.WzLib.Serializer
             string code = _codeGenerator.GenerateCode(modelBuilder);
             string filePath = Path.ChangeExtension(outputPath, _codeGenerator.FileExtension);
             File.WriteAllText(filePath, code);
+        }
+
+        /// <summary>
+        /// Automatically discovers and loads String.wz from the same directory as the current WZ file.
+        /// This ensures string data is available even if the user didn't explicitly select String.wz.
+        /// </summary>
+        private void AutoLoadStringData(WzDirectory wzDir)
+        {
+            // Skip if this IS String.wz (avoid recursion)
+            if (wzDir.Name == "String.wz")
+                return;
+
+            // Check if strings are already loaded
+            if (WzStringCache.Get("map", 100000000, "mapName") != null)
+            {
+                Debug.WriteLine("String cache already populated, skipping auto-load.");
+                return;
+            }
+
+            // Try to find String.wz in the same directory
+            string wzFilePath = wzDir.WzFileParent?.FilePath;
+            if (string.IsNullOrEmpty(wzFilePath))
+                return;
+
+            string wzDirectory = Path.GetDirectoryName(wzFilePath);
+            if (string.IsNullOrEmpty(wzDirectory))
+                return;
+
+            string stringWzPath = Path.Combine(wzDirectory, "String.wz");
+            if (!File.Exists(stringWzPath))
+            {
+                Debug.WriteLine($"String.wz not found at {stringWzPath}, string enrichment unavailable.");
+                return;
+            }
+
+            try
+            {
+                Debug.WriteLine($"Auto-loading String.wz from {stringWzPath}...");
+                
+                // Load String.wz
+                var stringWzFile = new WzFile(stringWzPath, wzDir.WzFileParent.MapleVersion);
+                stringWzFile.ParseWzFile();
+
+                // Process with WzStringParser
+                var stringParser = new WzStringParser();
+                var tempModelBuilder = new ModelBuilder();
+                stringParser.DefineSchema(tempModelBuilder);
+                stringParser.ParseAndExportData(stringWzFile.WzDirectory, tempModelBuilder, wzDirectory);
+
+                Debug.WriteLine("String.wz auto-loaded successfully.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.WriteLine($"Failed to auto-load String.wz: {ex.Message}");
+            }
         }
 
 #if DEBUG
