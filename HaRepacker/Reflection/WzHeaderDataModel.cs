@@ -18,6 +18,36 @@ namespace MapleLib.WzLib.Serializer.DataModels
         public string Sample { get; set; }
         public Dictionary<string, object> Info { get; set; } = new();
         public Dictionary<string, object> Spec { get; set; } = new();
+        [JsonProperty("render")]
+        public RenderData Render { get; set; } = new();
+    }
+
+    public class RenderData
+    {
+        [JsonProperty("stand1")]
+        public Dictionary<string, RenderNode> Stand1 { get; set; } = new();
+        [JsonProperty("default")]
+        public Dictionary<string, RenderNode> Default { get; set; } = new();
+    }
+
+    public class RenderNode
+    {
+        [JsonProperty("image")]
+        public string Image { get; set; }
+        [JsonProperty("origin")]
+        public Vector2D Origin { get; set; }
+        [JsonProperty("z")]
+        public string Z { get; set; }
+        [JsonExtensionData]
+        public Dictionary<string, object> OtherProperties { get; set; } = new();
+    }
+
+    public class Vector2D
+    {
+        [JsonProperty("x")]
+        public int X { get; set; }
+        [JsonProperty("y")]
+        public int Y { get; set; }
     }
     #endregion
 

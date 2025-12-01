@@ -29,6 +29,22 @@ namespace MapleLib.WzLib.Serializer.Parsers
             // Properties will be discovered and added during the parsing phase.
             modelBuilder.GetOrCreateStruct("Info");
             modelBuilder.GetOrCreateStruct("Spec");
+
+            // Define RenderData schema
+            var renderDataStruct = modelBuilder.GetOrCreateStruct("RenderData");
+            renderDataStruct.AddProperty(new PropertyDef("stand1", "Option<Map<String, RenderNode>>", ""));
+            renderDataStruct.AddProperty(new PropertyDef("default", "Option<Map<String, RenderNode>>", ""));
+
+            var renderNodeStruct = modelBuilder.GetOrCreateStruct("RenderNode");
+            renderNodeStruct.AddProperty(new PropertyDef("image", "String", ""));
+            renderNodeStruct.AddProperty(new PropertyDef("origin", "Vector2D", ""));
+            renderNodeStruct.AddProperty(new PropertyDef("z", "String", ""));
+
+            var vector2DStruct = modelBuilder.GetOrCreateStruct("Vector2D");
+            vector2DStruct.AddProperty(new PropertyDef("x", "i32", ""));
+            vector2DStruct.AddProperty(new PropertyDef("y", "i32", ""));
+
+            mainItemStruct.AddProperty(new PropertyDef("render", "Option<RenderData>", ""));
         }
 
         public override void ParseAndExportData(WzDirectory wzDir, ModelBuilder modelBuilder, string outputPath)
@@ -87,12 +103,101 @@ namespace MapleLib.WzLib.Serializer.Parsers
                     var icon = ExtractImageAsBase64(itemImg, "info/icon");
                     if (icon != null) itemData.Icon = icon;
 
+                    // Extract Render Data
+                    itemData.Render = ExtractRenderData(itemImg);
+
                     // Add props to item data
                     allItems.Add(itemData);
                 }
             }
 
             ExportDataToFile(allItems, "equip", outputPath);
+        }
+
+        private RenderData ExtractRenderData(WzImage itemImg)
+        {
+            var renderData = new RenderData();
+
+            // 1. Handle "stand1" -> "0" -> canvas
+            if (itemImg["stand1"] is WzSubProperty stand1Prop)
+            {
+                if (stand1Prop["0"] is WzSubProperty frame0)
+                {
+                    foreach (var prop in frame0.WzProperties)
+                    {
+                        if (prop is WzCanvasProperty canvasProp)
+                        {
+                            var renderNode = ExtractRenderNode(canvasProp);
+                            if (renderNode != null)
+                            {
+                                renderData.Stand1[prop.Name] = renderNode;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Handle "default" -> canvas
+            if (itemImg["default"] is WzSubProperty defaultProp)
+            {
+                foreach (var prop in defaultProp.WzProperties)
+                {
+                    if (prop is WzCanvasProperty canvasProp)
+                    {
+                        var renderNode = ExtractRenderNode(canvasProp);
+                        if (renderNode != null)
+                        {
+                            renderData.Default[prop.Name] = renderNode;
+                        }
+                    }
+                }
+            }
+
+            return renderData;
+        }
+
+        private RenderNode ExtractRenderNode(WzCanvasProperty canvasProp)
+        {
+            var node = new RenderNode();
+
+            // Extract Image
+            if (canvasProp.PngProperty != null)
+            {
+                var bytes = canvasProp.PngProperty.GetBytes();
+                node.Image = System.Convert.ToBase64String(bytes);
+            }
+
+            // Extract Properties
+            foreach (var subProp in canvasProp.WzProperties)
+            {
+                if (subProp.Name == "origin" && subProp is WzVectorProperty originVec)
+                {
+                    node.Origin = new Vector2D { X = originVec.X.Value, Y = originVec.Y.Value };
+                }
+                else if (subProp.Name == "z" && subProp is WzStringProperty zStr)
+                {
+                    node.Z = zStr.Value;
+                }
+                else
+                {
+                    // Dynamic extraction for other properties
+                    object val = null;
+                    if (subProp is WzVectorProperty vec) val = new Vector2D { X = vec.X.Value, Y = vec.Y.Value };
+                    else if (subProp is WzStringProperty str) val = str.Value;
+                    else if (subProp is WzIntProperty i) val = i.Value;
+                    else if (subProp is WzShortProperty s) val = s.Value;
+                    else if (subProp is WzLongProperty l) val = l.Value;
+                    else if (subProp is WzFloatProperty f) val = f.Value;
+                    else if (subProp is WzDoubleProperty d) val = d.Value;
+
+                    if (val != null)
+                    {
+                        node.OtherProperties[subProp.Name] = val;
+                    }
+                }
+            }
+
+            return node;
         }
     }
 }
