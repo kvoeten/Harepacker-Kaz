@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Drawing.Imaging;
 
 namespace MapleLib.WzLib.Serializer.Parsers
 {
@@ -183,8 +184,18 @@ namespace MapleLib.WzLib.Serializer.Parsers
 
                 if (current is WzPngProperty pngProp)
                 {
-                    var bytes = pngProp.GetBytes();
-                    return Convert.ToBase64String(bytes);
+                    using (var bitmap = pngProp.GetBitmap())
+                    {
+                        if (bitmap != null)
+                        {
+                            using (var stream = new MemoryStream())
+                            {
+                                bitmap.Save(stream, ImageFormat.Png);
+                                var bytes = stream.ToArray();
+                                return Convert.ToBase64String(bytes);
+                            }
+                        }
+                    }
                 }
             }
             catch

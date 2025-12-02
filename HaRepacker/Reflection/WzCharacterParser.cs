@@ -4,6 +4,8 @@ using MapleLib.WzLib.WzProperties;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Drawing.Imaging;
+using System.IO;
 
 namespace MapleLib.WzLib.Serializer.Parsers
 {
@@ -78,10 +80,10 @@ namespace MapleLib.WzLib.Serializer.Parsers
                     {
                         if (prop is WzSubProperty subProp && supersetStructs.TryGetValue(prop.Name, out var targetStruct))
                         {
-                            // 1. Update the schema by discovering properties within this node.
+                            // Update the schema by discovering properties within this node.
                             UpdateSchemaFromNode(subProp, targetStruct, modelBuilder, $"{categoryDir.Name}/{categoryDir.Name}/{itemImg.Name}/{prop.Name}");
 
-                            // 2. Parse the data for this section.
+                            // Parse the data for this section.
                             if (prop.Name == "info")
                             {
                                 itemData.Info = ParsePropertyNode(subProp);
@@ -163,8 +165,18 @@ namespace MapleLib.WzLib.Serializer.Parsers
             // Extract Image
             if (canvasProp.PngProperty != null)
             {
-                var bytes = canvasProp.PngProperty.GetBytes();
-                node.Image = System.Convert.ToBase64String(bytes);
+                using (var bitmap = canvasProp.PngProperty.GetBitmap())
+                {
+                    if (bitmap != null)
+                    {
+                        using (var stream = new MemoryStream())
+                        {
+                            bitmap.Save(stream, ImageFormat.Png);
+                            var bytes = stream.ToArray();
+                            node.Image = System.Convert.ToBase64String(bytes);
+                        }
+                    }
+                }
             }
 
             // Extract Properties
